@@ -259,25 +259,7 @@ CREATE TRIGGER update_progressions_updated_at
     FOR EACH ROW 
     EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================
--- Vérification
--- ============================================
-
--- Vérifier que toutes les tables sont créées
-SELECT 
-    table_name,
-    (SELECT COUNT(*) FROM information_schema.columns WHERE table_name = t.table_name) as nb_columns
-FROM information_schema.tables t
-WHERE table_schema = 'public' 
-  AND table_name IN (
-    'utilisateurs', 'objectifs', 'aliments', 'recettes', 
-    'recette_aliments', 'journal_alimentaire', 'exercices',
-    'sessions_sport', 'session_exercices', 'mesures_biometriques', 'progressions'
-  )
-ORDER BY table_name;
-
--- Afficher un message de succès
 DO $$
 BEGIN
-    RAISE NOTICE '✅ Toutes les tables ont été créées avec succès !';
+    RAISE NOTICE 'Tables créées avec succès.';
 END $$;
