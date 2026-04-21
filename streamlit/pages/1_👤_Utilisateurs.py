@@ -2,46 +2,103 @@ import streamlit as st
 import pandas as pd
 from utils.api_client import api_client
 from utils.flash import render_flash, flash_success
+from utils.style import inject_css, page_header, badge, section_header
 
 st.set_page_config(page_title="Utilisateurs", page_icon="👤", layout="wide")
-st.title("👤 Gestion des Utilisateurs")
-st.markdown("---")
+inject_css()
+page_header("👤", "Gestion des Utilisateurs", "Consultez, filtrez et créez des profils utilisateurs")
 render_flash()
 
-# Tabs pour organiser les actions
-tab_liste, tab_ajouter = st.tabs(["📋 Liste des utilisateurs", "➕ Ajouter un utilisateur"])
+tab_liste, tab_ajouter = st.tabs(["📋 Liste", "➕ Ajouter"])
 
 with tab_liste:
     try:
         utilisateurs = api_client.get("/utilisateurs")
         if utilisateurs:
             df = pd.DataFrame(utilisateurs)
-            colonnes_affichage = ["nom", "prenom", "email", "age", "sexe", "poids", "taille", "type_abonnement"]
-            colonnes_presentes = [c for c in colonnes_affichage if c in df.columns]
-            st.dataframe(df[colonnes_presentes], use_container_width=True)
 
-            # Détails d'un utilisateur
-            st.markdown("### Détails utilisateur")
+            # ── Filtres ──────────────────────────────────────────────────
+            col1, col2, col3 = st.columns([3, 2, 2])
+            with col1:
+                recherche = st.text_input("🔍 Rechercher (nom, prénom, email)", "")
+            with col2:
+                abos = ["Tous"] + sorted(df["type_abonnement"].dropna().unique().tolist()) if "type_abonnement" in df.columns else ["Tous"]
+                abo_filtre = st.selectbox("Abonnement", abos)
+            with col3:
+                sexes = ["Tous"] + sorted(df["sexe"].dropna().unique().tolist()) if "sexe" in df.columns else ["Tous"]
+                sexe_filtre = st.selectbox("Sexe", sexes)
+
+            df_f = df.copy()
+            if recherche:
+                mask = (
+                    df_f.get("nom", pd.Series(dtype=str)).str.contains(recherche, case=False, na=False) |
+                    df_f.get("prenom", pd.Series(dtype=str)).str.contains(recherche, case=False, na=False) |
+                    df_f.get("email", pd.Series(dtype=str)).str.contains(recherche, case=False, na=False)
+                )
+                df_f = df_f[mask]
+            if abo_filtre != "Tous" and "type_abonnement" in df_f.columns:
+                df_f = df_f[df_f["type_abonnement"] == abo_filtre]
+            if sexe_filtre != "Tous" and "sexe" in df_f.columns:
+                df_f = df_f[df_f["sexe"] == sexe_filtre]
+
+            st.caption(f"{len(df_f)} utilisateur(s) trouvé(s)")
+
+            # ── Tableau ──────────────────────────────────────────────────
+            cols_show = ["nom", "prenom", "email", "age", "sexe", "poids", "taille", "type_abonnement"]
+            cols_ok = [c for c in cols_show if c in df_f.columns]
+            st.dataframe(df_f[cols_ok], use_container_width=True, height=320)
+
+            # ── Détail utilisateur ────────────────────────────────────────
+            section_header("🔍", "Détail utilisateur")
+
             def label_user(row):
                 full = f"{row.get('prenom') or ''} {row.get('nom') or ''}".strip()
-                return full if full else row.get("email", str(row.get("id_utilisateur", "")))
-            labels = df.apply(label_user, axis=1).tolist()
-            label_selectionne = st.selectbox("Sélectionner un utilisateur", labels)
+                return full or row.get("email", str(row.get("id_utilisateur", "")))
 
-            if label_selectionne:
-                user = df.iloc[labels.index(label_selectionne)]
-                col1, col2, col3 = st.columns(3)
+            if not df_f.empty:
+                labels = df_f.apply(label_user, axis=1).tolist()
+                chosen = st.selectbox("Sélectionner", labels, key="sel_user")
+                user = df_f.iloc[labels.index(chosen)]
+
+                col1, col2 = st.columns([1, 2])
                 with col1:
-                    st.metric("Poids", f"{user.get('poids', 'N/A')} kg")
-                with col2:
-                    st.metric("Taille", f"{user.get('taille', 'N/A')} cm")
-                with col3:
-                    st.metric("Âge", f"{user.get('age', 'N/A')} ans")
+                    abo_val = user.get("type_abonnement", "")
+                    sexe_val = user.get("sexe", "")
+                    st.markdown(f"""
+                    <div class="info-card">
+                        <div class="info-card-title">👤 {label_user(user)}</div>
+                        <div class="info-row">
+                            <span class="info-row-label">Email</span>
+                            <span class="info-row-value">{user.get("email","—")}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">Âge</span>
+                            <span class="info-row-value">{user.get("age","—")} ans</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">Sexe</span>
+                            <span class="info-row-value">{badge(sexe_val)}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-row-label">Abonnement</span>
+                            <span class="info-row-value">{badge(abo_val)}</span>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                if user.get("objectifs"):
-                    st.markdown("**Objectifs:** " + ", ".join(user["objectifs"]))
+                with col2:
+                    c1, c2, c3 = st.columns(3)
+                    c1.metric("⚖️ Poids", f"{user.get('poids', '—')} kg")
+                    c2.metric("📏 Taille", f"{user.get('taille', '—')} cm")
+                    c3.metric("🎂 Âge", f"{user.get('age', '—')} ans")
+
+                    if user.get("objectifs"):
+                        objs = user["objectifs"]
+                        tags = " ".join(f'<span class="badge badge-autre" style="margin:2px">{o}</span>' for o in objs)
+                        st.markdown(f"**Objectifs :** {tags}", unsafe_allow_html=True)
+
         else:
-            st.info("Aucun utilisateur trouvé")
+            st.info("Aucun utilisateur trouvé.")
     except Exception as e:
         st.error(f"Erreur lors du chargement: {e}")
 
@@ -54,38 +111,26 @@ with tab_ajouter:
             email = st.text_input("Email *")
             age = st.number_input("Âge", min_value=1, max_value=120, value=30)
         with col2:
-            sexe = st.selectbox("Sexe", ["M", "F"])
+            sexe = st.selectbox("Sexe", ["M", "F", "Autre"])
             poids = st.number_input("Poids (kg)", min_value=20.0, max_value=300.0, value=70.0)
             taille = st.number_input("Taille (cm)", min_value=100.0, max_value=250.0, value=170.0)
-            type_abonnement = st.selectbox("Type d'abonnement", ["freemium", "premium"])
+            type_abonnement = st.selectbox("Abonnement", ["freemium", "premium", "premium+", "B2B"])
 
         objectifs = st.multiselect(
             "Objectifs",
             ["perte de poids", "musculation", "forme", "cardio", "flexibilité", "endurance"]
         )
 
-        submitted = st.form_submit_button("Créer l'utilisateur", use_container_width=True)
-
+        submitted = st.form_submit_button("✅ Créer l'utilisateur", use_container_width=True, type="primary")
         if submitted:
             if nom and prenom and email:
-                data = {
-                    "nom": nom,
-                    "prenom": prenom,
-                    "email": email,
-                    "age": age,
-                    "sexe": sexe,
-                    "poids": poids,
-                    "taille": taille,
-                    "type_abonnement": type_abonnement,
-                    "objectifs": objectifs
-                }
+                data = {"nom": nom, "prenom": prenom, "email": email, "age": age,
+                        "sexe": sexe, "poids": poids, "taille": taille,
+                        "type_abonnement": type_abonnement, "objectifs": objectifs}
                 try:
                     result = api_client.post("/utilisateurs", data)
                     uid = result.get("id_utilisateur", "—")
-                    flash_success(
-                        f"**Enregistrement réussi** — {prenom} {nom} (`{email}`) figure maintenant dans l’onglet « Liste ». "
-                        f"ID : `{uid}`"
-                    )
+                    flash_success(f"**Enregistrement réussi** — {prenom} {nom} (`{email}`). ID : `{uid}`")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Erreur: {e}")
