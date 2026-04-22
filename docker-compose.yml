@@ -64,7 +64,7 @@ services:
     volumes:
       - ./etl:/app
       - ./etl/data:/app/data
-    command: python scheduler.py
+    command: python scheduler.py run
     networks:
       - mspr_network
     restart: unless-stopped
