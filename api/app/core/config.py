@@ -32,7 +32,14 @@ class Settings(BaseSettings):
     ADMIN_EMAILS: str = ""
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:8501", "http://localhost:3000"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+        "http://localhost:8003",
+        "http://127.0.0.1:8003",
+    ]
     
     # API
     API_V1_PREFIX: str = "/api/v1"

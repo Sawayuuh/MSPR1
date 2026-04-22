@@ -92,16 +92,16 @@ docker-compose logs -f
 
 ### 2.4. Vérifier le Déploiement
 
-1. **API FastAPI** : http://localhost:8000
-   - Documentation Swagger : http://localhost:8000/docs
-   - Health check : http://localhost:8000/health
+1. **API FastAPI** : http://localhost:8002 (port hôte dans `docker-compose.yml`)
+   - Documentation Swagger : http://localhost:8002/docs
+   - Health check : http://localhost:8002/health
 
-2. **Interface Streamlit** : http://localhost:8501
+2. **Interface web Next.js** : http://localhost:8003 (défaut Docker ; surcharger avec `WEB_PORT` dans `.env`)
 
 3. **Vérifier les logs** :
 ```bash
 docker-compose logs api
-docker-compose logs streamlit
+docker-compose logs web
 docker-compose logs etl
 ```
 
@@ -130,13 +130,13 @@ source venv/bin/activate  # Sur Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-#### Interface Streamlit
+#### Interface Next.js
 
 ```bash
-cd streamlit
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+cd web
+npm install
+cp .env.example .env.local
+# Éditer .env.local : API_URL=http://127.0.0.1:8002 (port hôte mappé dans docker-compose)
 ```
 
 #### Pipeline ETL
@@ -164,12 +164,11 @@ source venv/bin/activate
 uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-#### Interface Streamlit
+#### Interface Next.js
 
 ```bash
-cd streamlit
-source venv/bin/activate
-streamlit run app.py --server.port 8501
+cd web
+npm run dev
 ```
 
 #### Pipeline ETL (manuel)
@@ -252,21 +251,15 @@ tail -f /var/log/etl.log  # Si configuré avec cron
 
 ### 6.1. API FastAPI
 
-- **URL** : http://localhost:8000
-- **Documentation Swagger** : http://localhost:8000/docs
-- **Documentation ReDoc** : http://localhost:8000/redoc
-- **Health Check** : http://localhost:8000/health
+- **URL (hôte, compose)** : http://localhost:8002
+- **Documentation Swagger** : http://localhost:8002/docs
+- **Documentation ReDoc** : http://localhost:8002/redoc
+- **Health Check** : http://localhost:8002/health
 
-### 6.2. Interface Streamlit
+### 6.2. Interface web Next.js
 
-- **URL** : http://localhost:8501
-- **Pages disponibles** :
-  - Accueil : Statistiques globales
-  - Dashboard : Graphiques et KPIs
-  - Exercices : Gestion CRUD
-  - Utilisateurs : Gestion CRUD
-  - Aliments : Gestion CRUD
-  - Configuration : Outils et export
+- **URL (Docker, hôte)** : http://localhost:8003 par défaut, ou la valeur de `WEB_PORT` dans `.env`
+- **Fonctions** : authentification (JWT), consultation et saisie des ressources métier via l’API
 
 ---
 
@@ -391,7 +384,7 @@ Pour toute question ou problème :
 2. Vérifier les logs des services
 3. Consulter la documentation des technologies utilisées :
    - [FastAPI](https://fastapi.tiangolo.com/)
-   - [Streamlit](https://docs.streamlit.io/)
+   - [Next.js](https://nextjs.org/docs)
    - [Supabase](https://supabase.com/docs)
    - [Docker](https://docs.docker.com/)
 

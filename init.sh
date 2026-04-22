@@ -2,7 +2,7 @@
 
 # Script d'initialisation du projet MSPR
 
-echo "🚀 Initialisation du projet MSPR TPRE501"
+echo "🚀 Initialisation du projet MSPR TPRE502"
 echo ""
 
 # Vérifier si Docker est installé
@@ -11,8 +11,8 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose n'est pas installé. Veuillez l'installer d'abord."
+if ! docker compose version &> /dev/null && ! command -v docker-compose &> /dev/null; then
+    echo "❌ Docker Compose n'est pas disponible (essayez : docker compose version)."
     exit 1
 fi
 
@@ -21,8 +21,8 @@ echo ""
 
 # Créer le fichier .env s'il n'existe pas
 if [ ! -f .env ]; then
-    echo "📝 Création du fichier .env depuis env.example..."
-    cp env.example .env
+    echo "📝 Création du fichier .env depuis .env.example..."
+    cp .env.example .env
     echo "⚠️  IMPORTANT: Veuillez éditer le fichier .env avec vos credentials Supabase"
     echo ""
 else
@@ -37,15 +37,33 @@ if [ ! -d "etl/data" ]; then
 fi
 
 echo "📦 Construction des images Docker..."
-docker-compose build
+docker compose build
 
 echo ""
 echo "✅ Initialisation terminée !"
 echo ""
+
+# Même logique que docker-compose : ${WEB_PORT:-8003} (le compose lit .env ; on affiche le bon port)
+WEB_PORT_DISPLAY=8003
+if [ -f .env ]; then
+  _wp_line=$(grep -E '^[[:space:]]*WEB_PORT=' .env | tail -1 || true)
+  if [ -n "$_wp_line" ]; then
+    WEB_PORT_DISPLAY=$(echo "$_wp_line" | sed 's/^[[:space:]]*WEB_PORT=//' | tr -d '"' | tr -d "'" | tr -d ' ')
+  fi
+fi
+
 supabase start
-docker compose up
-echo "3. Accédez à l'API: http://localhost:8000/docs"
-echo "4. Accédez à Streamlit: http://localhost:8501"
+echo ""
+echo "➜  Démarrage des conteneurs (Ctrl+C pour arrêter)."
+echo "   API : http://localhost:8002/docs"
+echo "   Web : http://localhost:${WEB_PORT_DISPLAY}"
+echo "   Astuce : port déjà utilisé → éditer WEB_PORT dans .env ou arrêter l’autre processus."
+echo "   Anciens conteneurs (ex. streamlit) : nettoyés avec --remove-orphans."
+echo ""
+docker compose up --remove-orphans
+echo ""
+echo "API : http://localhost:8002/docs"
+echo "Web : http://localhost:${WEB_PORT_DISPLAY}"
 echo ""
 
   

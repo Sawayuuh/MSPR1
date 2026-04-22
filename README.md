@@ -1,11 +1,11 @@
-# MSPR TPRE501 - Projet de Mise en Situation Professionnelle
+# MSPR TPRE502 - Projet de Mise en Situation Professionnelle
 
 ## 📋 Description du projet
 
 Projet MSPR développé avec une architecture moderne utilisant :
 - **Base de données** : Supabase (PostgreSQL)
 - **API** : FastAPI avec documentation OpenAPI automatique
-- **Interface Admin** : Streamlit
+- **Interface web** : Next.js (App Router)
 - **ETL** : Python + Pandas + SQLAlchemy
 - **Orchestration** : Docker & Docker Compose
 
@@ -24,12 +24,10 @@ MSPR1/
 │   ├── Dockerfile
 │   └── requirements.txt
 │
-├── streamlit/             # Interface d'administration
-│   ├── app.py            # Application principale
-│   ├── pages/            # Pages Streamlit
-│   ├── utils/            # Utilitaires
+├── web/                   # Interface Next.js
+│   ├── src/app/          # Pages et route proxy `/api/mspr/*` → FastAPI
 │   ├── Dockerfile
-│   └── requirements.txt
+│   └── package.json
 │
 ├── etl/                   # Pipeline ETL
 │   ├── extract.py        # Extraction des données
@@ -83,15 +81,16 @@ MSPR1/
    ```
 
 4. **Accéder aux services**
-   - **API FastAPI** : http://localhost:8000
-   - **Documentation API** : http://localhost:8000/docs
-   - **Interface Streamlit** : http://localhost:8501
+   - **API FastAPI** : http://localhost:8002 (port hôte mappé dans `docker-compose.yml`)
+   - **Documentation API** : http://localhost:8002/docs
+   - **Interface web (Docker)** : http://localhost:8003 par défaut — si tu vois un autre JSON sur un port, c’est une autre appli ; l’API MSPR est sur **8002**
+   - **Interface web (`npm run dev` dans `web/`)** : http://localhost:3000
 
 ## 📚 Documentation des services
 
 ### API FastAPI
 
-L'API FastAPI est accessible sur le port 8000. La documentation interactive est disponible à `/docs`.
+L'API FastAPI est exposée sur le port **8002** côté hôte dans ce dépôt (`8002:8000`). La documentation interactive est sur `/docs`.
 
 #### Endpoints disponibles
 
@@ -106,21 +105,23 @@ L'API FastAPI est accessible sur le port 8000. La documentation interactive est 
 2. Créer le router avec vos endpoints
 3. Ajouter le router dans `api/app/api/v1/api.py`
 
-### Interface Streamlit
+### Interface web (Next.js)
 
-L'interface d'administration Streamlit est accessible sur le port 8501.
+L'interface est servie sur le port **3000**. Les appels API passent par le proxy interne ` /api/mspr/* ` (voir `web/src/app/api/mspr/`), configuré avec `API_URL` (souvent `http://api:8000` dans Docker).
 
-#### Structure des pages
+#### Développement local sans Docker pour le front
 
-- **Accueil** : Page principale avec vue d'ensemble
-- **Dashboard** : Tableaux de bord et visualisations
-- **Configuration** : Paramètres de l'application
+```bash
+cd web
+cp .env.example .env.local   # ajuster API_URL (ex. http://127.0.0.1:8002)
+npm install
+npm run dev
+```
 
-#### Ajouter une nouvelle page
+#### Ajouter une page
 
-1. Créer un nouveau fichier dans `streamlit/pages/`
-2. Utiliser les widgets Streamlit pour créer l'interface
-3. Utiliser `utils/api_client.py` pour communiquer avec l'API
+1. Créer un fichier sous `web/src/app/(dashboard)/`
+2. Utiliser `apiFetch` depuis `web/src/lib/api.ts` pour appeler l'API via le proxy
 
 ### Pipeline ETL
 
@@ -148,7 +149,7 @@ docker-compose exec etl python scheduler.py
 ### Structure du code
 
 - **API** : Architecture modulaire avec séparation des routes, modèles et utilitaires
-- **Streamlit** : Application multi-pages avec utilitaires réutilisables
+- **Next.js** : interface avec authentification JWT (stockage local) et proxy vers FastAPI
 - **ETL** : Pipeline modulaire Extract-Transform-Load
 
 ### Ajout de dépendances
@@ -164,7 +165,7 @@ docker-compose exec etl python scheduler.py
 
 Les tests peuvent être ajoutés dans chaque service :
 - `api/tests/` pour les tests de l'API
-- `streamlit/tests/` pour les tests Streamlit
+- tests front : à ajouter sous `web/` si besoin
 - `etl/tests/` pour les tests ETL
 
 ## 📝 Variables d'environnement
@@ -177,7 +178,7 @@ Les tests peuvent être ajoutés dans chaque service :
 | `DATABASE_URL` | URL de connexion PostgreSQL | `postgresql://postgres:pass@...` |
 | `JWT_SECRET` | Secret pour JWT | `your-secret-key` |
 | `ETL_SCHEDULE` | Planning ETL (format cron) | `0 */6 * * *` |
-| `API_URL` | URL de l'API (pour Streamlit) | `http://api:8000` |
+| `API_URL` | URL de l'API pour le **conteneur web** (proxy serveur) | `http://api:8000` |
 
 ## 🧪 Tests
 

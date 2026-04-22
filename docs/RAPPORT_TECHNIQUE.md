@@ -280,7 +280,7 @@ Les principaux défis ont été relevés avec succès, notamment la gestion de d
 ```
 MSPR1/
 ├── api/                    # Service FastAPI
-├── streamlit/              # Interface d'administration
+├── web/                    # Interface Next.js
 ├── etl/                    # Pipeline ETL
 ├── docs/                   # Documentation
 ├── test/                   # Tests

@@ -29,20 +29,15 @@ services:
     networks:
       - mspr_network
 
-  streamlit:
+  web:
     build:
-      context: ./streamlit
+      context: ./web
       dockerfile: Dockerfile
-    container_name: mspr_streamlit
+    container_name: mspr_web
     ports:
-      - "8501:8501"
+      - "${WEB_PORT:-8003}:3000"
     environment:
       - API_URL=http://api:8000
-      - SUPABASE_URL=${SUPABASE_URL}
-      - SUPABASE_KEY=${SUPABASE_KEY}
-    volumes:
-      - ./streamlit:/app
-    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
     depends_on:
       - api
     networks:

@@ -68,13 +68,13 @@ Après avoir mis à jour le `.env`, redémarre les services :
 
 ```bash
 # Arrêter les services
-pkill -f 'uvicorn|streamlit'
+pkill -f 'uvicorn|next'
 
 # Redémarrer l'API
 cd api && python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
 
 # Redémarrer Streamlit
-cd streamlit && streamlit run app.py --server.port 8501 --server.address 0.0.0.0 &
+cd web && npm run dev &
 ```
 
 ## 5. Vérifier la connexion

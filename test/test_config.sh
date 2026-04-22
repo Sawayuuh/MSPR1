@@ -74,7 +74,7 @@ if [ -f .env ]; then
     
 else
     echo -e "${RED}❌ Le fichier .env n'existe pas${NC}"
-    echo "   Créez-le avec: cp env.example .env"
+    echo "   Créez-le avec: cp .env.example .env"
     exit 1
 fi
 
@@ -82,7 +82,7 @@ echo ""
 
 # Vérifier la structure des dossiers
 echo "3️⃣  Vérification de la structure du projet..."
-required_dirs=("api" "streamlit" "etl")
+required_dirs=("api" "web" "etl")
 all_present=true
 
 for dir in "${required_dirs[@]}"; do
@@ -116,10 +116,10 @@ else
     echo -e "   ${RED}❌ api/Dockerfile manquant${NC}"
 fi
 
-if [ -f "streamlit/Dockerfile" ]; then
-    echo -e "   ${GREEN}✅ streamlit/Dockerfile existe${NC}"
+if [ -f "web/Dockerfile" ]; then
+    echo -e "   ${GREEN}✅ web/Dockerfile existe${NC}"
 else
-    echo -e "   ${RED}❌ streamlit/Dockerfile manquant${NC}"
+    echo -e "   ${RED}❌ web/Dockerfile manquant${NC}"
 fi
 
 if [ -f "etl/Dockerfile" ]; then

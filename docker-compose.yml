@@ -26,23 +26,18 @@ services:
     networks:
       - mspr_network
 
-  # Interface Admin Streamlit
-  streamlit:
+  # Interface web Next.js (proxy API vers le service `api`)
+  web:
     build:
-      context: ./streamlit
+      context: ./web
       dockerfile: Dockerfile
-    container_name: mspr_streamlit
+    container_name: mspr_web
     ports:
-      # Même port hôte que dans les logs Streamlit (évite confusion avec localhost:8501)
-      - "8501:8501"
+      # Hôte : défaut 8003 (évite le conflit avec d’autres apps sur 8000, ex. dashboards Python).
+      # Forcer 8000 : WEB_PORT=8000 dans `.env` après avoir arrêté l’autre service sur ce port.
+      - "${WEB_PORT:-8003}:3000"
     environment:
       - API_URL=http://api:8000
-      # Même cible que api/etl : Supabase CLI sur la machine hôte (voir docs/SUPABASE_LOCAL.md)
-      - SUPABASE_URL=http://host.docker.internal:54321
-      - SUPABASE_KEY=${SUPABASE_KEY}
-    volumes:
-      - ./streamlit:/app
-    command: streamlit run app.py --server.port 8501 --server.address 0.0.0.0
     depends_on:
       - api
     networks:
