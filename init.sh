@@ -42,9 +42,8 @@ docker-compose build
 echo ""
 echo "✅ Initialisation terminée !"
 echo ""
-echo "📋 Prochaines étapes:"
-echo "1. Éditez le fichier .env avec vos credentials Supabase"
-echo "2. Lancez les services avec: docker-compose up"
+supabase start
+docker compose up
 echo "3. Accédez à l'API: http://localhost:8000/docs"
 echo "4. Accédez à Streamlit: http://localhost:8501"
 echo ""
