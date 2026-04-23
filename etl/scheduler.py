@@ -140,7 +140,7 @@ def run_etl_pipeline():
             df_mesures = transform_gym_members_to_mesures(df_gym, email_to_id)
             if len(df_mesures) > 0:
                 logger.info("💾 Chargement des mesures biométriques dans Supabase...")
-                ok = loader.load_dataframe(df_mesures, "mesures_biometriques")
+                ok = loader.upsert_dataframe(df_mesures, "mesures_biometriques", on_conflict="id_utilisateur")
                 logger.info(f"{'✅' if ok else '⚠️ '} {len(df_mesures)} mesures biométriques traitées")
         except Exception as e:
             logger.error(f"❌ Erreur gym members : {str(e)}", exc_info=True)
@@ -204,7 +204,7 @@ def main():
         else:
             # Default: every 6 hours
             trigger = CronTrigger(hour="*/6")
-    except:
+    except (ValueError, IndexError, AttributeError):
         # Default: every 6 hours
         trigger = CronTrigger(hour="*/6")
     

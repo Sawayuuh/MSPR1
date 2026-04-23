@@ -64,9 +64,9 @@ services:
     volumes:
       - ./etl:/app
       - ./etl/data:/app/data
-    # Ne pas utiliser `scheduler.py run` ici : le processus se termine et, avec
-    # restart: unless-stopped, Docker redémarre en boucle → "restarting", exec impossible.
-    # Lancement manuel une fois : docker compose exec etl python scheduler.py run
+    # Lance l'ETL une fois au démarrage puis démarre le scheduler.
+    # Le script run_then_schedule.sh évite la boucle restart infinie.
+    command: bash -c "python scheduler.py run; python scheduler.py"
     networks:
       - mspr_network
     restart: unless-stopped
