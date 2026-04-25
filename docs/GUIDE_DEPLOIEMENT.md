@@ -13,7 +13,7 @@
 
 - **Docker** : Version 24.0 ou supérieure
 - **Docker Compose** : Version 2.20 ou supérieure
-- **Git** : Pour cloner le repository (optionnel)
+- **Git** : git@github.com:kebab34/MSPR1.git
 - **Python** : 3.10 ou supérieure (pour développement local sans Docker)
 
 ### 1.2. Compte Supabase
@@ -47,7 +47,7 @@ Les variables d'environnement suivantes sont requises :
 ### 2.1. Cloner le Repository
 
 ```bash
-git clone <repository-url>
+git clone git@github.com:kebab34/MSPR1.git
 cd MSPR1
 ```
 
