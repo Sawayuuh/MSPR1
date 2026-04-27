@@ -12,10 +12,11 @@ services:
       # Hôte : API exposée sur 8001 vers le port interne 8000.
       - "8001:8000"
     environment:
-      - SUPABASE_URL=http://host.docker.internal:54321
+      # Tout vient du `.env` : cloud (https://xxx.supabase.co) ou local (host.docker.internal).
+      - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - DATABASE_URL=${DATABASE_URL}
       - JWT_SECRET=${JWT_SECRET}
       - ADMIN_EMAILS=${ADMIN_EMAILS:-}
     volumes:
@@ -33,11 +34,15 @@ services:
       context: ./web
       dockerfile: Dockerfile
     container_name: mspr_web
+    # Linux : réseau bridge entre conteneurs souvent bloqué par iptables.
+    # On passe par l'hôte (host.docker.internal:8001) plutôt que le DNS Docker interne.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       # Hôte : défaut 8000. Pour un autre port, utiliser WEB_PORT dans `.env`.
       - "${WEB_PORT:-8000}:3000"
     environment:
-      - API_URL=http://api:8000
+      - API_URL=http://host.docker.internal:8001
     depends_on:
       - api
     restart: unless-stopped
@@ -53,9 +58,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
-      - SUPABASE_URL=http://host.docker.internal:54321
+      - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
-      - DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:54322/postgres
+      - SUPABASE_SERVICE_KEY=${SUPABASE_SERVICE_KEY}
+      - DATABASE_URL=${DATABASE_URL}
       - KAGGLE_USERNAME=${KAGGLE_USERNAME:-}
       - KAGGLE_KEY=${KAGGLE_KEY:-}
       # Planification cron (5 champs). Défaut : lundi 02h00 UTC.

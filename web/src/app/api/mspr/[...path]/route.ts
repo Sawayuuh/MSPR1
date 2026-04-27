@@ -28,7 +28,23 @@ async function forward(
     if (body.byteLength) init.body = body;
   }
 
-  const res = await fetch(target, init);
+  let res: Response;
+  try {
+    res = await fetch(target, init);
+  } catch (e) {
+    const msg =
+      e instanceof Error
+        ? e.message
+        : "Erreur réseau vers l'API (vérifie que le service FastAPI tourne, ex. mspr_api sur 8001).";
+    return NextResponse.json(
+      {
+        detail:
+          "Impossible de joindre l'API MSPR. Lance `docker compose up` (ou uvicorn) et ouvre /docs sur le port 8001.",
+        cause: msg,
+      },
+      { status: 502, headers: { "content-type": "application/json" } },
+    );
+  }
   const out = new NextResponse(await res.arrayBuffer(), {
     status: res.status,
   });
