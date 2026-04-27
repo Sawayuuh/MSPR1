@@ -16,8 +16,9 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Ne pas utiliser `lib/` seul : ça ignore aussi web/src/lib/ (Next.js)
+/lib/
+/lib64/
 parts/
 sdist/
 var/
