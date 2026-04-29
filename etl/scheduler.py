@@ -44,6 +44,9 @@ from transform import (
     validate_data,
 )
 
+# Racine du repo (MSPR1/.env) puis etl/.env — Render injecte les vars sans fichier.
+_repo_root = Path(__file__).resolve().parent.parent
+load_dotenv(_repo_root / ".env")
 load_dotenv()
 
 # ---------------------------------------------------------------------------

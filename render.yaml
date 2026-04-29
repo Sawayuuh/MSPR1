@@ -1,0 +1,28 @@
+# Blueprint Render — worker ETL (remplit Supabase : exercices, aliments, etc.)
+# Déploiement : Dashboard Render → New → Blueprint → connecter le repo Sawayuuh/MSPR1
+#
+# Après création du service, renseigner dans Environment (valeurs secrètes) :
+#   SUPABASE_URL, SUPABASE_SERVICE_KEY (obligatoires pour l’écriture)
+# Optionnel : SUPABASE_KEY, KAGGLE_USERNAME, KAGGLE_KEY (téléchargement auto des CSV Kaggle)
+# ETL_SCHEDULE : cron 5 champs UTC (défaut ci-dessous : lundi 02:00)
+
+services:
+  - type: worker
+    name: mspr-etl
+    runtime: docker
+    dockerfilePath: ./etl/Dockerfile
+    dockerContext: ./etl
+    branch: main
+    envVars:
+      - key: ETL_SCHEDULE
+        value: "0 2 * * 1"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false
