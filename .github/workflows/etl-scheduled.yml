@@ -26,13 +26,28 @@ jobs:
         working-directory: etl
 
     env:
+      # Noms exacts attendus : Repository secrets / Actions (pas seulement Environment sans bloc environment: ci-dessous).
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+      # Alias accepté si tu as nommé le secret autrement sur GitHub :
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY || secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
       KAGGLE_USERNAME: ${{ secrets.KAGGLE_USERNAME }}
       KAGGLE_KEY: ${{ secrets.KAGGLE_KEY }}
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Vérifier secrets Supabase (sans les afficher)
+        working-directory: .
+        run: |
+          ok=1
+          if [ -z "${SUPABASE_URL}" ]; then echo "::error::Secret SUPABASE_URL vide ou absent — va dans Settings → Secrets and variables → Actions → Repository secrets. Nom exact : SUPABASE_URL"; ok=0; fi
+          if [ -z "${SUPABASE_SERVICE_KEY}" ] && [ -z "${SUPABASE_KEY}" ]; then
+            echo "::error::Il faut SUPABASE_SERVICE_KEY (clé service_role Supabase) ou à défaut SUPABASE_KEY. Repository secrets, nom exact."
+            ok=0
+          fi
+          [ "$ok" -eq 1 ] || exit 1
+          echo "Secrets Supabase présents (valeurs masquées)."
 
       - name: Setup Python
         uses: actions/setup-python@v5
