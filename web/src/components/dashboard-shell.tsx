@@ -34,6 +34,7 @@ function NavLink({ item, active, onClick }: { item: NavItem; active: boolean; on
     <Link
       href={item.href}
       onClick={onClick}
+      aria-current={active ? "page" : undefined}
       className={cn(
         "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
         active
@@ -77,14 +78,19 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           <span className="text-sm font-semibold text-white tracking-tight">HealthAI Coach</span>
         </div>
         {onClose && (
-          <button onClick={onClose} className="text-slate-500 hover:text-white p-1">
-            <IconX size={16} />
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-slate-500 hover:text-white p-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            aria-label="Fermer le menu"
+          >
+            <IconX size={16} aria-hidden />
           </button>
         )}
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5" aria-label="Navigation principale">
         {visibleItems.map((item) => (
           <NavLink
             key={item.href}
@@ -109,10 +115,12 @@ function Sidebar({ onClose }: { onClose?: () => void }) {
           </div>
         </div>
         <button
+          type="button"
           onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50"
+          aria-label="Se déconnecter"
         >
-          <IconLogOut size={14} />
+          <IconLogOut size={14} aria-hidden />
           Déconnexion
         </button>
       </div>
@@ -136,7 +144,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 flex lg:hidden">
           <div className="fixed inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="relative w-64 z-10">
+          <div id="mobile-sidebar-panel" className="relative w-64 z-10" role="dialog" aria-modal="true" aria-label="Menu">
             <Sidebar onClose={() => setMobileOpen(false)} />
           </div>
         </div>
@@ -147,10 +155,14 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         {/* Mobile top bar */}
         <header className="lg:hidden sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-zinc-950/90 border-b border-slate-800 backdrop-blur">
           <button
+            type="button"
             onClick={() => setMobileOpen(true)}
-            className="text-slate-400 hover:text-white p-1"
+            className="text-slate-400 hover:text-white p-1 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            aria-expanded={mobileOpen}
+            aria-controls="mobile-sidebar-panel"
+            aria-label="Ouvrir le menu de navigation"
           >
-            <IconMenu size={20} />
+            <IconMenu size={20} aria-hidden />
           </button>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-md bg-blue-600 flex items-center justify-center">

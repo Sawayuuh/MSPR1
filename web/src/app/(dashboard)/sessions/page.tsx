@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/contexts/auth-context";
 import { apiFetch } from "@/lib/api";
+import { fetchAll } from "@/lib/fetch-all";
 import { fetchUsersForPicker, labelUser, type PickUser } from "@/lib/picker-users";
 import { PageHeader, Btn, Card, Input, Select, Alert, SkeletonTable, EmptyState, Badge } from "@/components/ui";
 import { IconTimer, IconPlus, IconAlertCircle, IconCheck, IconCalendar, IconZap, IconSearch, IconX, IconDumbbell, IconTrash, IconDownload } from "@/components/icons";
@@ -25,7 +26,7 @@ type Session = {
   session_exercices?: SessionExercice[];
 };
 
-type Exercice = { id_exercice: string; nom: string; groupe_musculaire?: string };
+type Exercice = { id_exercice: string; nom: string; groupe_musculaire?: string; niveau?: string };
 
 type ExerciceSelection = {
   id_exercice: string;
@@ -63,28 +64,37 @@ export default function SessionsPage() {
   const [duree, setDuree] = useState("45");
   const [intensite, setIntensite] = useState<"faible" | "moderee" | "elevee">("moderee");
 
-  // Exercices
+  // Exercices (liste complète issue de la base, jusqu’à 1000 entrées / requête API)
   const [allExercices, setAllExercices] = useState<Exercice[]>([]);
+  const [exLoading, setExLoading] = useState(false);
+  const [pickExerciceId, setPickExerciceId] = useState("");
   const [exSearch, setExSearch] = useState("");
   const [showExDrop, setShowExDrop] = useState(false);
   const [selectedEx, setSelectedEx] = useState<ExerciceSelection[]>([]);
   const exRef = useRef<HTMLDivElement>(null);
 
   const exSuggestions = useMemo(() => {
-    const q = exSearch.toLowerCase();
+    const q = exSearch.toLowerCase().trim();
     return allExercices
-      .filter((e) => !selectedEx.find((s) => s.id_exercice === e.id_exercice))
-      .filter((e) => !q || e.nom.toLowerCase().includes(q))
-      .slice(0, 8);
+      .filter((e) => !selectedEx.some((s) => s.id_exercice === e.id_exercice))
+      .filter((e) => !q || e.nom.toLowerCase().includes(q));
   }, [allExercices, exSearch, selectedEx]);
 
   useEffect(() => {
     if (!token || !profile) return;
     fetchUsersForPicker(token, profile).then(setUsers).catch(() => {});
-    apiFetch<Exercice[]>("/exercices", { token, params: { limit: "1000" } })
-      .then((d) => setAllExercices(Array.isArray(d) ? d : []))
-      .catch(() => {});
   }, [token, profile]);
+
+  useEffect(() => {
+    if (!token || !profile || !showForm) return;
+    let cancelled = false;
+    setExLoading(true);
+    fetchAll<Exercice>("/exercices", token)
+      .then((d) => { if (!cancelled) setAllExercices(d); })
+      .catch(() => { if (!cancelled) setAllExercices([]); })
+      .finally(() => { if (!cancelled) setExLoading(false); });
+    return () => { cancelled = true; };
+  }, [token, profile, showForm]);
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -154,6 +164,7 @@ export default function SessionsPage() {
       setMsg("Session enregistrée.");
       setShowForm(false);
       setSelectedEx([]);
+      setPickExerciceId("");
       setExSearch("");
       const data = await apiFetch<Session[]>("/sessions", { token, params: { utilisateur_id: userId, date_debut: dateDebut, date_fin: dateFin } });
       setRows(Array.isArray(data) ? data : []);
@@ -207,35 +218,102 @@ export default function SessionsPage() {
 
             {/* Sélecteur d'exercices */}
             <div>
-              <p className="text-xs text-slate-400 mb-2">Exercices réalisés <span className="text-slate-600">(optionnel)</span></p>
+              <p className="text-xs text-slate-400 mb-2">
+                Exercices réalisés <span className="text-slate-600">(optionnel)</span>
+                {!exLoading && (
+                  <span className="text-slate-600">
+                    {" "}· {allExercices.length} exercice{allExercices.length !== 1 ? "s" : ""} en base
+                  </span>
+                )}
+              </p>
+
+              <Select
+                label="Choisir dans la base"
+                className="mb-3"
+                value={pickExerciceId}
+                disabled={exLoading || allExercices.length === 0}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setPickExerciceId("");
+                  if (!id) return;
+                  const ex = allExercices.find((x) => String(x.id_exercice) === id);
+                  if (!ex || selectedEx.some((s) => String(s.id_exercice) === id)) return;
+                  setSelectedEx((prev) => [...prev, {
+                    id_exercice: String(ex.id_exercice),
+                    nom: ex.nom,
+                    nombre_series: "",
+                    nombre_repetitions: "",
+                    poids: "",
+                  }]);
+                }}
+              >
+                <option value="">
+                  {exLoading ? "Chargement des exercices…" : allExercices.length === 0 ? "Aucun exercice en base" : "— Sélectionner un exercice —"}
+                </option>
+                {allExercices
+                  .filter((e) => !selectedEx.some((s) => String(s.id_exercice) === String(e.id_exercice)))
+                  .map((ex) => (
+                    <option key={ex.id_exercice} value={String(ex.id_exercice)}>
+                      {ex.nom}
+                      {ex.groupe_musculaire ? ` (${ex.groupe_musculaire})` : ""}
+                    </option>
+                  ))}
+              </Select>
+
+              {!exLoading && allExercices.length === 0 && (
+                <p className="text-xs text-amber-400/90 mb-3">
+                  Aucun exercice en base pour l’instant. Ajoutez-les depuis le menu « Exercices » puis rouvrez ce formulaire.
+                </p>
+              )}
+
+              <p className="text-xs text-slate-500 mb-1.5">Ou rechercher et cliquer sur une ligne :</p>
               <div className="relative" ref={exRef}>
                 <div className="relative">
-                  <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                  <IconSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" aria-hidden />
                   <input
                     type="text"
-                    placeholder="Ajouter un exercice…"
+                    placeholder="Filtrer par nom…"
                     value={exSearch}
                     onChange={(e) => { setExSearch(e.target.value); setShowExDrop(true); }}
                     onFocus={() => setShowExDrop(true)}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={exLoading || allExercices.length === 0}
+                    className="w-full pl-8 pr-3 py-2 bg-slate-800 border border-slate-700 rounded-lg text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                    aria-autocomplete="list"
+                    aria-expanded={showExDrop}
+                    aria-controls="session-exercice-suggestions"
                   />
                 </div>
-                {showExDrop && exSuggestions.length > 0 && (
-                  <ul className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-auto max-h-48">
-                    {exSuggestions.map((ex) => (
-                      <li
-                        key={ex.id_exercice}
-                        onMouseDown={() => {
-                          setSelectedEx((prev) => [...prev, { id_exercice: ex.id_exercice, nom: ex.nom, nombre_series: "", nombre_repetitions: "", poids: "" }]);
-                          setExSearch("");
-                          setShowExDrop(false);
-                        }}
-                        className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-700 text-sm"
-                      >
-                        <span className="text-slate-200">{ex.nom}</span>
-                        {ex.groupe_musculaire && <span className="text-xs text-slate-500 ml-2 shrink-0">{ex.groupe_musculaire}</span>}
-                      </li>
-                    ))}
+                {showExDrop && !exLoading && allExercices.length > 0 && (
+                  <ul
+                    id="session-exercice-suggestions"
+                    role="listbox"
+                    className="absolute z-50 mt-1 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-auto max-h-64"
+                  >
+                    {exSuggestions.length === 0 ? (
+                      <li className="px-3 py-2 text-sm text-slate-500">Aucun résultat pour cette recherche.</li>
+                    ) : (
+                      exSuggestions.map((ex) => (
+                        <li
+                          key={ex.id_exercice}
+                          role="option"
+                          onMouseDown={() => {
+                            setSelectedEx((prev) => [...prev, {
+                              id_exercice: String(ex.id_exercice),
+                              nom: ex.nom,
+                              nombre_series: "",
+                              nombre_repetitions: "",
+                              poids: "",
+                            }]);
+                            setExSearch("");
+                            setShowExDrop(false);
+                          }}
+                          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-700 text-sm"
+                        >
+                          <span className="text-slate-200">{ex.nom}</span>
+                          {ex.groupe_musculaire && <span className="text-xs text-slate-500 ml-2 shrink-0">{ex.groupe_musculaire}</span>}
+                        </li>
+                      ))
+                    )}
                   </ul>
                 )}
               </div>
@@ -276,7 +354,7 @@ export default function SessionsPage() {
 
             <div className="flex gap-2">
               <Btn type="submit" loading={saving} size="sm">Enregistrer</Btn>
-              <Btn type="button" variant="ghost" size="sm" onClick={() => { setShowForm(false); setSelectedEx([]); setExSearch(""); }}>Annuler</Btn>
+              <Btn type="button" variant="ghost" size="sm" onClick={() => { setShowForm(false); setSelectedEx([]); setPickExerciceId(""); setExSearch(""); }}>Annuler</Btn>
             </div>
           </form>
         </Card>
